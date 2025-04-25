@@ -1,0 +1,7 @@
+*.o
+*.swp
+/build
+core
+.fig
+cmake-build-*
+.idea
