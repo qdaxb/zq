@@ -1,58 +1,97 @@
-# Zindex
+# zq
+[中文文档](README_cn.md)
 
-## 介绍
-由开源版zindex工具重写后得到的gzip日志检索工具。
-开源版地址：https://github.com/mattgodbolt/zindex
+## Introduction
+Inspired by the open-source tool [zindex](https://github.com/mattgodbolt/zindex), this gzip log search tool is based on a partial rewrite of the original code.
 
-主要修改了开源版的以下方面：
-1. 重新全部索引逻辑，降低索引文件尺寸，开源版索引文件尺寸与日志归档文件尺寸比例约1:1.3，经过优化后尺寸比例为50:1
-2. 删除部分参数及功能，开源版需要通过config file支持多列索引，修改后可通过参数直接指定多列
+The following major changes were made to the open-source version:
+1. Completely rewrote the indexing logic to reduce the index file size. In the open-source version, the index file size is about 1.3 times that of the compressed log file. After optimization, the ratio is approximately 50:1.
+2. Removed some parameters and features. The open-source version requires a config file to support multi-column indexing, while the modified version allows specifying multiple columns directly through parameters.
 
-## 能力
-### 索引文件尺寸
-索引尺寸与待索引字段的数据分布及文件行数相关，字段内容重复率高则索引文件体积降低。
+## Capabilities
 
-测试一个压缩后2GB的700万行无重复字段的日志文件，产生的索引文件约为36MB.
+### Index File Size
+The size of the index file depends on the data distribution and number of lines in the source file. High repetition in field values leads to smaller index files.
 
-### 检索性能
+For example, indexing a 2GB compressed log file with 7 million lines and no duplicate field values produces an index file of about 36MB.
 
-检索性能与待检索字段的数据分布及文件大小相关，字段重复率高则检索速度变慢。
+### Search Performance
+Search performance is affected by the data distribution of the target field and the file size. Higher repetition in field values results in slower searches.
 
-同上文件，直接zgrep耗时约30+s，通过索引检索时间约0.4s。
+For the same file mentioned above:
+- Using `zgrep` directly takes about 30+ seconds.
+- Using the index-based search takes about 0.4 seconds.
 
-## 原理
-### 索引
-#### chunk索引
-gzip文件中seek功能基于xlib作者的zrand.c文件开发，大致逻辑为将gzip文件按尺寸拆分为chunk，每个chunk需要创建一个32kb的dict索引，之后可以直接seek到该chunk起始位置并开始解压缩。具体逻辑可以参考https://github.com/circulosmeos/gztool background部分
-zindex工程的chunk索引保留了开源版大部分逻辑，默认每32MB创建一个chunk，chunk的dict内容保存在sqllite数据库中，跳转到chunk后的内部索引通过解压缩并drop数据实现。
+## Principle
 
-#### field索引
-对待索引field做hash32后取模(0xFFFFu)作为索引key，内容所在行对应的gzip offset作为索引value。整体采用hash<key,list<value>>方式组织索引数据。
-为节约存储，采用二进制原始数据方式组织文件，文件格式为：
+### Indexing
+
+#### Chunk Index
+The `seek` functionality within the gzip file is developed based on `zrand.c` by the xlib author. The basic logic involves splitting the gzip file into chunks by size. Each chunk requires a 32KB dictionary index, which allows direct seeking to the chunk's starting position for decompression. More details can be found in the background section of https://github.com/circulosmeos/gztool.
+
+The chunk indexing logic from the open-source version is largely retained in this project. By default, a chunk is created every 32MB. The chunk's dictionary content is stored in an SQLite database. Internal indexing within the chunk is achieved through decompression and data dropping.
+
+#### Field Index
+A hash32 of the field value is taken and then modulo `0xFFFFu` to produce the index key. The gzip offset of the line containing the value is stored as the index value. The overall structure of the index data is a `hash<key, list<value>>`.
+
+To save storage space, binary raw data is used with the following file format:
 ```
 key  | size  | offset1 | offset2 | offset3
 4byte| 4byte | 8byte   | 8byte   | 8byte
 ```
 
-查找文件时，先读取key及size，如果key不匹配则继续读取`size*8`个空间并drop掉，然后继续读取下一个key。
+During a search, the file is read sequentially. If the key doesn't match, the next `size * 8` bytes are skipped, and the next key is read.
 
-这里为降低数据存储空间，采用了压缩方式保存offset，由于每个key对应的offset为一个数组，在offset超过0xFFFFFFFE时，将增加一个特殊mask占位符，扫描到mask之后,后续的offset值会做如下计算`offset=offset+0xFFFFFFFE*count(mask)`
+To further reduce the file size, offsets are compressed. Since each key maps to a list of offsets, if any offset exceeds `0xFFFFFFFE`, a special `mask` placeholder is inserted. Upon encountering a mask, subsequent offsets are calculated as:
+```
+offset = offset + 0xFFFFFFFE * count(mask)
+```
 
-同时，由于每个list的空间不再是定长存储，无法精确drop list，因此增加一个padding占位(`0xFFFFFFFF`)，每次key不匹配则drop `size*4`个空间，然后继续读到`0xFFFFFFFF`。
+Also, since the list size is no longer fixed-length, it’s not possible to drop lists precisely. To address this, a `padding` placeholder (`0xFFFFFFFF`) is added. When a key mismatch occurs, the process drops `size * 4` bytes and reads until the next `0xFFFFFFFF`.
 
-最终的索引文件格式为
+Final index file format:
 ```
 padding | key   | size  | offset1 | offset2 | mask  | offset3
 4byte   | 4byte | 4byte | 4byte   | 4byte   | 4byte | 4byte
 ```
 
-已知问题：
-1. 每次查询要顺序读取全部文件，由于索引文件较小，因此这部分时间代价不高。如果考虑继续优化，可以在生成索引时将key放在文件头部，并增加对应value list的offset
-2. 索引文件尺寸与key的数量及offset list的平均长度相关，若key太多，则每key需要额外增加4byte padding，并且offset mask无法降低存储；若key太少，则冲突概率变高，offset list的value数量增加，需要解压大量chunk获取数据。目前key的数量最大为65536个，offset list数量不限制。后续可以考虑根据文件内容情况自动判断key及list大小。
+### Known Issues
+1. Each query must sequentially read the entire file. However, since the index file is small, this doesn't significantly impact performance. For future optimization, keys could be placed at the file header during indexing, along with offsets to their corresponding value lists.
+2. The size of the index file depends on the number of keys and the average length of the offset lists. Too many keys increase padding overhead and make offset compression ineffective. Too few keys increase collisions and the size of offset lists, requiring more chunk decompression. Currently, the maximum number of keys is 65,536, with no limit on offset list size. Future improvements could automatically adjust key and list sizes based on file content.
 
-## 开发
-### 编译
+
+## Usage
+
+### zindex - Create index for compressed files
 ```
+Usage: zindex [options] input-file
+
+Options:
+  -v, --verbose              Be more verbose
+      --debug                Be even more verbose
+      --colour, --color      Use colour even on non-TTY
+  -w, --warnings             Log warnings at info level
+      --checkpoint-every N   Create a compression checkpoint every N bytes
+  -f, --field NUM            Create an index using field NUM (1-based)
+  -d, --delimiter DELIM      Use DELIM as the field delimiter
+      --tab-delimiter        Use a tab character as the field delimiter
+```
+
+### zq - Search in indexed compressed files
+```
+Usage: zq [options] query input-file [input-file...]
+
+Options:
+  -v, --verbose              Be more verbose
+      --debug                Be even more verbose
+      --colour, --color      Use colour even on non-TTY
+  -w, --warnings             Log warnings at info level
+  -i, --index INDEX          Use specified index for searching
+```
+
+## Development
+### Build
+```bash
 cmake . -DStatic:BOOL=On -DCMAKE_BUILD_TYPE=Release
 make
 ```
