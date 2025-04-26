@@ -17,8 +17,6 @@ jobs:
             cmake_flags: ""
           - name: "static"
             cmake_flags: "-DStatic=ON"
-          - name: "lto"
-            cmake_flags: "-DUseLTO=ON"
     
     steps:
     - name: Checkout code
