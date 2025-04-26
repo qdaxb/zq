@@ -119,4 +119,4 @@ public:
                       const std::string &indexFilename, bool forceLoad);
 };
 
-static const int QUERY_LENGTH = 5;
+static const int QUERY_LENGTH = 32;
