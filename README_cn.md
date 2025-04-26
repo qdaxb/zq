@@ -53,7 +53,7 @@
 ### 索引
 #### chunk索引
 gzip文件中seek功能基于xlib作者的zrand.c文件开发，大致逻辑为将gzip文件按尺寸拆分为chunk，每个chunk需要创建一个32kb的dict索引，之后可以直接seek到该chunk起始位置并开始解压缩。具体逻辑可以参考https://github.com/circulosmeos/gztool background部分
-zindex工程的chunk索引保留了开源版大部分逻辑，默认每32MB创建一个chunk，chunk的dict内容保存在sqllite数据库中，跳转到chunk后的内部索引通过解压缩并drop数据实现。
+zindex工程的chunk索引保留了开源版大部分逻辑，默认每32MB创建一个chunk，chunk的dict内容保存在SQLite数据库中，跳转到chunk后的内部索引通过解压缩并drop数据实现。
 
 #### field索引
 对待索引field做hash32后取模(0xFFFFu)作为索引key，内容所在行对应的gzip offset作为索引value。整体采用hash<key,list<value>>方式组织索引数据。
