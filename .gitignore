@@ -5,3 +5,5 @@ core
 .fig
 cmake-build-*
 .idea
+CMakeFiles/
+CMakeCache.txt
