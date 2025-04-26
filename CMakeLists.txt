@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.4)
+cmake_minimum_required(VERSION 3.10)
 project(zindex)
 
 if (APPLE AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
