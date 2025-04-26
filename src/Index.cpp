@@ -65,7 +65,7 @@ struct Progress {
         auto now = time(nullptr);
         if (now < nextProgress) return;
         char pc[QUERY_LENGTH];
-        snprintf(pc, sizeof(pc) - 1, "%.2f",
+        snprintf(pc, sizeof(pc) - 1, "%5.2f",
                  (progress * 100.0) / of);
         log.info("Progress: ", Printer(progress), " of ",
                  Printer(of), " (", pc, "%)");
@@ -791,7 +791,7 @@ Index Index::load(Log &log, File &&fromCompressed,
 
     std::unique_ptr<Impl> impl(new Impl(log,
                                         std::move(fromCompressed),
-                                        std::move(indexFilename),
+                                        indexFilename,
                                         std::move(db)));
     impl->init(forceLoad);
     return Index(std::move(impl));

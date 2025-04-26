@@ -55,7 +55,20 @@ endif (ArchNative)
 
 include(CTest)
 
-set(ZLIB_USE_STATIC_LIBS "ON")
+# Only use static ZLIB on non-macOS platforms
+if (NOT APPLE)
+    set(ZLIB_USE_STATIC_LIBS "ON")
+endif()
+
+# On macOS with GitHub Actions, we need to help CMake find the Homebrew-installed zlib
+if (APPLE AND DEFINED ENV{GITHUB_ACTIONS})
+    set(ZLIB_ROOT "/usr/local/opt/zlib")
+    # Alternative path for newer macOS runners
+    if (NOT EXISTS "${ZLIB_ROOT}")
+        set(ZLIB_ROOT "/opt/homebrew/opt/zlib")
+    endif()
+endif()
+
 find_package(ZLIB REQUIRED)
 include_directories(BEFORE SYSTEM ext/sqlite)
 include_directories(${ZLIB_INCLUDE_DIRS} src ext)
