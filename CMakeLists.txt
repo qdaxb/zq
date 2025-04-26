@@ -35,10 +35,14 @@ if (UseLTO)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -flto -Wno-maybe-uninitialized")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-linker-plugin")
 endif (UseLTO)
-
 set(COMMON_LIBS "")
 if (Static)
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static -static-libgcc -static-libstdc++")
+    if (APPLE AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        # macOS with Clang doesn't support these GCC-specific options
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+    else()
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static -static-libgcc -static-libstdc++")
+    endif()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DSQLITE_OMIT_LOAD_EXTENSION=1")
     set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
     set(BUILD_SHARED_LIBRARIES OFF)
@@ -60,13 +64,17 @@ if (NOT APPLE)
     set(ZLIB_USE_STATIC_LIBS "ON")
 endif()
 
-# On macOS with GitHub Actions, we need to help CMake find the Homebrew-installed zlib
-if (APPLE AND DEFINED ENV{GITHUB_ACTIONS})
+# On macOS, we need to help CMake find the Homebrew-installed zlib
+if (APPLE)
     set(ZLIB_ROOT "/usr/local/opt/zlib")
     # Alternative path for newer macOS runners
     if (NOT EXISTS "${ZLIB_ROOT}")
         set(ZLIB_ROOT "/opt/homebrew/opt/zlib")
     endif()
+    
+    # Add Homebrew include and lib paths
+    include_directories(BEFORE SYSTEM /usr/local/include /opt/homebrew/include)
+    link_directories(/usr/local/lib /opt/homebrew/lib)
 endif()
 
 find_package(ZLIB REQUIRED)

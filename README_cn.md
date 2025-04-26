@@ -82,7 +82,22 @@ padding | key   | size  | offset1 | offset2 | mask  | offset3
 
 ## 开发
 ### 编译
-```
+
+#### Linux
+```bash
 cmake . -DStatic:BOOL=On -DCMAKE_BUILD_TYPE=Release
 make
 ```
+
+#### macOS
+```bash
+# 对于 Intel Mac
+cmake . -DStatic:BOOL=OFF -DCMAKE_BUILD_TYPE=Release
+make
+
+# 对于 Apple Silicon (M1/M2) Mac
+cmake . -DStatic:BOOL=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
+make
+```
+
+注意：macOS 不完全支持静态链接，因此我们使用动态链接代替。

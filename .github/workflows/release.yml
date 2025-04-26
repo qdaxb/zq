@@ -14,12 +14,17 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, macos-14]
         config:
           - name: "default"
             cmake_flags: ""
+            include_os: ["ubuntu-latest", "macos-latest"]
           - name: "static"
             cmake_flags: "-DStatic=ON"
+            include_os: ["ubuntu-latest"]
+          - name: "macos-arm64"
+            cmake_flags: "-DCMAKE_OSX_ARCHITECTURES=arm64"
+            include_os: ["macos-14"]
     
     steps:
     - name: Checkout code
@@ -30,27 +35,34 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y build-essential cmake zlib1g-dev
-        
-    - name: Install dependencies (macOS)
+    
+    - name: Install dependencies (macOS Intel)
       if: matrix.os == 'macos-latest'
       run: |
-        brew update
+        brew install cmake zlib
+        
+    - name: Install dependencies (macOS ARM64)
+      if: matrix.os == 'macos-14'
+      run: |
         brew install cmake zlib
         
     - name: Configure and build
+      if: contains(matrix.config.include_os, matrix.os)
       run: |
         mkdir build
         cd build
-        cmake .. ${{ matrix.config.cmake_flags }}
+        cmake .. ${{ matrix.config.cmake_flags }} -DStatic:BOOL=OFF
         make -j4
         
     - name: Package artifacts
+      if: contains(matrix.config.include_os, matrix.os)
       run: |
         mkdir -p release
         cp build/zindex build/zq release/
-        tar czvf zq-${{ github.ref_name }}-${{ matrix.os }}.tar.gz -C release .
+        tar czvf zq-${{ github.ref_name }}-${{ matrix.os }}-${{ matrix.config.name }}.tar.gz -C release .
         
     - name: Run basic tests
+      if: contains(matrix.config.include_os, matrix.os)
       run: |
         cd build
         ./zq --help
@@ -58,9 +70,9 @@ jobs:
         
     - name: Release
       uses: softprops/action-gh-release@v1
-      if: startsWith(github.ref, 'refs/tags/')
+      if: startsWith(github.ref, 'refs/tags/') && contains(matrix.config.include_os, matrix.os)
       with:
         name: Release ${{ github.ref_name }}
         draft: false
         prerelease: false
-        files: ./zq-${{ github.ref_name }}-${{ matrix.os }}.tar.gz
+        files: ./zq-${{ github.ref_name }}-${{ matrix.os }}-${{ matrix.config.name }}.tar.gz

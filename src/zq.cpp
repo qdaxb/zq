@@ -99,7 +99,7 @@ int Main(int argc, const char *argv[]) {
             }
 
             auto indexFile = compressedFile + ".zindex";
-            auto index = Index::load(log, move(in), indexFile.c_str(), false);
+            auto index = Index::load(log, std::move(in), indexFile.c_str(), false);
             auto queryIndex = queryIndexArg.isSet() ? queryIndexArg.getValue()
                                                     : "-1";
 

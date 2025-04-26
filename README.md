@@ -91,7 +91,22 @@ padding | key   | size  | offset1 | offset2 | mask  | offset3
 
 ## Development
 ### Build
+
+#### Linux
 ```bash
 cmake . -DStatic:BOOL=On -DCMAKE_BUILD_TYPE=Release
 make
 ```
+
+#### macOS
+```bash
+# For Intel Macs
+cmake . -DStatic:BOOL=OFF -DCMAKE_BUILD_TYPE=Release
+make
+
+# For Apple Silicon (M1/M2) Macs
+cmake . -DStatic:BOOL=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
+make
+```
+
+Note: Static linking is not fully supported on macOS, so we use dynamic linking instead.

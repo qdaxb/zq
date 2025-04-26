@@ -1,9 +1,110 @@
+# Compiled Object files
 *.o
-*.swp
-/build
-core
-.fig
-cmake-build-*
-.idea
+*.obj
+*.lo
+*.slo
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Compiled Static libraries
+*.a
+*.la
+*.lai
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+zq
+zindex
+
+# Build directories
+/build/
+/bin/
+/lib/
+cmake-build-*/
 CMakeFiles/
 CMakeCache.txt
+*.cmake
+!CMakeLists.txt
+Makefile.in
+*.make
+install_manifest.txt
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-*
+.project
+.cproject
+.settings/
+.clangd/
+.cache/
+compile_commands.json
+.vs/
+ipch/
+*.aps
+*.ncb
+*.opendb
+*.opensdf
+*.sdf
+*.cachefile
+*.VC.db
+*.VC.VC.opendb
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+core
+core.*
+vgcore.*
+callgrind.out.*
+perf.data*
+.gdb_history
+
+# Testing
+Testing/
+/CTestTestfile.cmake
+/tests/test_runner
+/tests/*.log
+/tests/*.xml
+/tests/tmp/
+
+# Dependency directories
+/vcpkg/
+/conan/
+/deps/
+/third_party/
+/external/
+
+# Generated files
+.fig
+*.log
+*.tmp
+*.temp
+*.tcl
+*.gcov
+*.gcda
+*.gcno
+*.profraw
+*.profdata
+
+# OS specific
+.DS_Store
+.directory
+Thumbs.db
+desktop.ini
