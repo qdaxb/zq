@@ -1,0 +1,66 @@
+name: Release Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Build and Release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        config:
+          - name: "default"
+            cmake_flags: ""
+          - name: "static"
+            cmake_flags: "-DStatic=ON"
+          - name: "lto"
+            cmake_flags: "-DUseLTO=ON"
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Install dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake zlib1g-dev
+        
+    - name: Install dependencies (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        brew update
+        brew install cmake zlib
+        
+    - name: Configure and build
+      run: |
+        mkdir build
+        cd build
+        cmake .. ${{ matrix.config.cmake_flags }}
+        make -j4
+        
+    - name: Package artifacts
+      run: |
+        mkdir -p release
+        cp build/zindex build/zq release/
+        tar czvf zq-${{ github.ref_name }}-${{ matrix.os }}.tar.gz -C release .
+        
+    - name: Run basic tests
+      run: |
+        cd build
+        ./zq --help
+        ./zindex --help
+        
+    - name: Upload release assets
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./zq-${{ github.ref_name }}-${{ matrix.os }}.tar.gz
+        asset_name: zq-${{ github.ref_name }}-${{ matrix.os }}.tar.gz
+        asset_content_type: application/gzip

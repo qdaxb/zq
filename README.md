@@ -8,7 +8,7 @@ The following major changes were made to the open-source version:
 1. Completely rewrote the indexing logic to reduce the index file size. In the open-source version, the index file size is about 1.3 times that of the compressed log file. After optimization, the ratio is approximately 50:1.
 2. Removed some parameters and features. The open-source version requires a config file to support multi-column indexing, while the modified version allows specifying multiple columns directly through parameters.
 
-## Capabilities
+## Advantages
 
 ### Index File Size
 The size of the index file depends on the data distribution and number of lines in the source file. High repetition in field values leads to smaller index files.
@@ -21,6 +21,35 @@ Search performance is affected by the data distribution of the target field and 
 For the same file mentioned above:
 - Using `zgrep` directly takes about 30+ seconds.
 - Using the index-based search takes about 0.4 seconds.
+
+## Usage
+
+### zindex - Create index for compressed files
+```
+Usage: zindex [options] input-file
+
+Options:
+  -v, --verbose              Be more verbose
+      --debug                Be even more verbose
+      --colour, --color      Use colour even on non-TTY
+  -w, --warnings             Log warnings at info level
+      --checkpoint-every N   Create a compression checkpoint every N bytes
+  -f, --field NUM            Create an index using field NUM (1-based)
+  -d, --delimiter DELIM      Use DELIM as the field delimiter
+      --tab-delimiter        Use a tab character as the field delimiter
+```
+
+### zq - Search in indexed compressed files
+```
+Usage: zq [options] query input-file [input-file...]
+
+Options:
+  -v, --verbose              Be more verbose
+      --debug                Be even more verbose
+      --colour, --color      Use colour even on non-TTY
+  -w, --warnings             Log warnings at info level
+  -i, --index INDEX          Use specified index for searching
+```
 
 ## Principle
 
@@ -59,35 +88,6 @@ padding | key   | size  | offset1 | offset2 | mask  | offset3
 1. Each query must sequentially read the entire file. However, since the index file is small, this doesn't significantly impact performance. For future optimization, keys could be placed at the file header during indexing, along with offsets to their corresponding value lists.
 2. The size of the index file depends on the number of keys and the average length of the offset lists. Too many keys increase padding overhead and make offset compression ineffective. Too few keys increase collisions and the size of offset lists, requiring more chunk decompression. Currently, the maximum number of keys is 65,536, with no limit on offset list size. Future improvements could automatically adjust key and list sizes based on file content.
 
-
-## Usage
-
-### zindex - Create index for compressed files
-```
-Usage: zindex [options] input-file
-
-Options:
-  -v, --verbose              Be more verbose
-      --debug                Be even more verbose
-      --colour, --color      Use colour even on non-TTY
-  -w, --warnings             Log warnings at info level
-      --checkpoint-every N   Create a compression checkpoint every N bytes
-  -f, --field NUM            Create an index using field NUM (1-based)
-  -d, --delimiter DELIM      Use DELIM as the field delimiter
-      --tab-delimiter        Use a tab character as the field delimiter
-```
-
-### zq - Search in indexed compressed files
-```
-Usage: zq [options] query input-file [input-file...]
-
-Options:
-  -v, --verbose              Be more verbose
-      --debug                Be even more verbose
-      --colour, --color      Use colour even on non-TTY
-  -w, --warnings             Log warnings at info level
-  -i, --index INDEX          Use specified index for searching
-```
 
 ## Development
 ### Build
