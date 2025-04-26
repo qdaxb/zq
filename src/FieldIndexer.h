@@ -13,7 +13,7 @@ class FieldIndexer : public LineIndexer {
     std::vector<int> negFields_;
 public:
     FieldIndexer(std::string separator, std::vector<int> fields) : separator_(
-            move(separator)) {
+            std::move(separator)) {
         std::sort(fields.begin(), fields.end());
         for (auto iter = fields.begin(); iter != fields.end(); iter++) {
             if (*iter > 0) {
